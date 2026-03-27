@@ -1,0 +1,490 @@
+#include <iostream>
+#include <fstream>
+#include <string>
+#include <iomanip>
+using namespace std;
+
+// Simple structure to store one student information
+struct Student {
+    string id;           // Student ID like "CS001"
+    string name;         // Student full name
+    string subjects[8];  // Maximum 8 subjects names
+    float marks[8];      // Marks for each subject (0-100)
+    float gpa;           // GPA calculated from marks
+    char grade;          // Final grade A,B,C,D,F
+    int numSubjects;     // How many subjects this student has
+};
+
+// Array to store maximum 100 students
+Student students[100];
+int totalStudents = 0;  // Current number of students
+
+// Function declarations (telling compiler these functions exist)
+void displayHeader();
+void displayMenu();
+void drawLine(int width);
+void addStudent();
+void searchStudent();
+void updateStudent();
+void calculateGPA();
+void displayAllStudents();
+void sortStudents();
+void displayToppers();
+void showReports();
+void saveData();
+void loadData();
+void clearScreen();
+
+int main() {
+    // Load existing data when program starts
+    loadData();
+
+    int choice;  // To store user's menu choice
+
+    // Main loop - keeps running until user chooses 0
+    do {
+        // Clear screen and show menu
+        clearScreen();
+        displayHeader();
+        displayMenu();
+
+        // Get choice from user
+        cout << "\nEnter Choice [0-9]: ";
+        cin >> choice;
+
+        // Switch case to call different functions
+        if (choice == 1) {
+            addStudent();
+        }
+        else if (choice == 2) {
+            searchStudent();
+        }
+        else if (choice == 3) {
+            updateStudent();
+        }
+        else if (choice == 4) {
+            calculateGPA();
+        }
+        else if (choice == 5) {
+            displayAllStudents();
+        }
+        else if (choice == 6) {
+            sortStudents();
+        }
+        else if (choice == 7) {
+            displayToppers();
+        }
+        else if (choice == 8) {
+            showReports();
+        }
+        else if (choice == 9) {
+            saveData();
+        }
+        else if (choice == 0) {
+            // Exit program
+            cout << "\nThank you for using UET Gradebook System!\n";
+            saveData();  // Save before exit
+        }
+        else {
+            cout << "\nInvalid choice! Please try 0-9 only.\n";
+        }
+
+        // Wait for user to press enter (except when exiting)
+        if (choice != 0) {
+            cout << "\nPress Enter to continue...";
+            cin.ignore();  // Clear leftover input
+            cin.get();     // Wait for Enter
+        }
+    } while (choice != 0);  // Loop until 0
+
+    return 0;
+}
+
+// Display program header
+void displayHeader() {
+    cout << "\n";
+    cout << "================================================================================\n";
+    cout << "                        UNIVERSITY MANAGEMENT SYSTEM                            \n";
+    cout << "================================================================================\n\n";
+}
+
+// Display main menu options
+void displayMenu() {
+    drawLine(75);  // Top border
+    cout << "                           MAIN MENU OPTIONS                                   \n";
+    drawLine(75);  // Middle border
+    cout << " 1. Add New Student                    6. Sort Students by GPA                 \n";
+    cout << " 2. Search Student by ID               7. Display Top 5 Students               \n";
+    cout << " 3. Update Student Marks               8. Generate Reports                     \n";
+    cout << " 4. Calculate GPA & Grades             9. Save Data to File                    \n";
+    cout << " 5. Display All Students               0. Exit Program                         \n";
+    drawLine(75);  // Bottom border
+    cout << "                            Total Students: " << totalStudents << "                 \n";
+    drawLine(75);
+}
+
+// Draw line of = signs (for decoration)
+void drawLine(int width) {
+    for (int i = 0; i < width; i++) {
+        cout << "=";
+    }
+    cout << endl;
+}
+
+// Clear screen (works on Windows and Linux)
+void clearScreen() {
+#ifdef _WIN32
+    system("cls");  // Windows command
+#else
+    system("clear"); // Linux/Mac command
+#endif
+}
+
+// Function 1: Add new student
+void addStudent() {
+    // Check if array is full
+    if (totalStudents >= 100) {
+        cout << "\nSorry! Maximum 100 students allowed!\n";
+        return;  // Exit function
+    }
+
+    // Get reference to new student position
+    Student& s = students[totalStudents];
+
+    cout << "\n=== ADD NEW STUDENT ===\n";
+
+    // Get student ID
+    cout << "Enter Student ID: ";
+    cin >> s.id;
+
+    // Check if ID already exists
+    for (int i = 0; i < totalStudents; i++) {
+        if (students[i].id == s.id) {
+            cout << "Error! Student ID already exists!\n";
+            return;
+        }
+    }
+
+    // Get student name (use getline for spaces)
+    cout << "Enter Student Name: ";
+    cin.ignore();  // Clear leftover newline
+    getline(cin, s.name);
+
+    // Get number of subjects
+    cout << "Enter Number of Subjects (1-8): ";
+    cin >> s.numSubjects;
+
+    // Validate number of subjects
+    if (s.numSubjects < 1 || s.numSubjects > 8) {
+        cout << "Please enter 1-8 subjects only!\n";
+        return;
+    }
+
+    cin.ignore();  // Clear buffer
+
+    // Get subject names
+    cout << "\n=== ENTER SUBJECT NAMES ===\n";
+    for (int i = 0; i < s.numSubjects; i++) {
+        cout << "Subject " << (i + 1) << ": ";
+        getline(cin, s.subjects[i]);
+    }
+
+    // Get marks for each subject
+    cout << "\n=== ENTER MARKS (0-100) ===\n";
+    for (int i = 0; i < s.numSubjects; i++) {
+        do {
+            cout << s.subjects[i] << " marks: ";
+            cin >> s.marks[i];
+
+            // Validate marks
+            if (s.marks[i] < 0 || s.marks[i] > 100) {
+                cout << "Marks must be between 0 and 100!\n";
+                cin.ignore();  // Clear invalid input
+            }
+        } while (s.marks[i] < 0 || s.marks[i] > 100);
+    }
+
+    // Initialize GPA and grade
+    s.gpa = 0;
+    s.grade = ' ';
+
+    // Increase total students count
+    totalStudents++;
+
+    cout << "\n✓ Student added successfully!\n";
+}
+
+// Function 2: Search student by ID
+void searchStudent() {
+    string searchId;
+    cout << "\n=== SEARCH STUDENT ===\n";
+    cout << "Enter Student ID: ";
+    cin >> searchId;
+
+    // Loop through all students
+    for (int i = 0; i < totalStudents; i++) {
+        if (students[i].id == searchId) {
+            // Calculate GPA before displaying
+            calculateGPA();
+
+            cout << "\n=== STUDENT FOUND ===\n";
+            cout << "ID: " << students[i].id << endl;
+            cout << "Name: " << students[i].name << endl;
+            cout << "Total Subjects: " << students[i].numSubjects << endl;
+
+            cout << "\nSubjects and Marks:\n";
+            drawLine(40);
+            for (int j = 0; j < students[i].numSubjects; j++) {
+                cout << setw(20) << left << students[i].subjects[j];
+                cout << students[i].marks[j] << "/100" << endl;
+            }
+            drawLine(40);
+            cout << "GPA: " << fixed << setprecision(2) << students[i].gpa << endl;
+            cout << "Grade: " << students[i].grade << endl;
+            return;  // Found, exit function
+        }
+    }
+    cout << "\n✗ Student not found!\n";
+}
+
+// Function 3: Update student marks
+void updateStudent() {
+    string searchId;
+    cout << "\n=== UPDATE STUDENT MARKS ===\n";
+    cout << "Enter Student ID: ";
+    cin >> searchId;
+
+    // Find student
+    for (int i = 0; i < totalStudents; i++) {
+        if (students[i].id == searchId) {
+            cout << "\nUpdating marks for: " << students[i].name << endl;
+
+            // Update each subject mark
+            for (int j = 0; j < students[i].numSubjects; j++) {
+                cout << students[i].subjects[j]
+                    << " (Current: " << students[i].marks[j] << "): ";
+                cin >> students[i].marks[j];
+            }
+
+            cout << "\n✓ Marks updated successfully!\n";
+            return;
+        }
+    }
+    cout << "\n✗ Student not found!\n";
+}
+
+// Function 4: Calculate GPA for all students
+void calculateGPA() {
+    for (int i = 0; i < totalStudents; i++) {
+        float totalMarks = 0;
+
+        // Add marks of all subjects
+        for (int j = 0; j < students[i].numSubjects; j++) {
+            totalMarks += students[i].marks[j];
+        }
+
+        // Calculate GPA (average)
+        students[i].gpa = totalMarks / students[i].numSubjects;
+
+        // Assign grade based on GPA
+        if (students[i].gpa >= 90) {
+            students[i].grade = 'A';
+        }
+        else if (students[i].gpa >= 80) {
+            students[i].grade = 'B';
+        }
+        else if (students[i].gpa >= 70) {
+            students[i].grade = 'C';
+        }
+        else if (students[i].gpa >= 60) {
+            students[i].grade = 'D';
+        }
+        else {
+            students[i].grade = 'F';
+        }
+    }
+    cout << "\n✓ GPA calculated for all " << totalStudents << " students!\n";
+}
+
+// Function 5: Display all students
+void displayAllStudents() {
+    if (totalStudents == 0) {
+        cout << "\nNo students added yet!\n";
+        return;
+    }
+
+    calculateGPA();  // Update GPAs first
+
+    cout << "\n=== ALL STUDENTS LIST ===\n";
+    cout << setw(8) << left << "ID"
+        << setw(20) << left << "Name"
+        << setw(10) << left << "Subjects"
+        << setw(8) << left << "GPA"
+        << setw(6) << left << "Grade" << endl;
+    drawLine(50);
+
+    for (int i = 0; i < totalStudents; i++) {
+        cout << setw(8) << left << students[i].id
+            << setw(20) << left << students[i].name.substr(0, 19)
+            << setw(8) << left << students[i].numSubjects
+            << setw(8) << left << fixed << setprecision(1) << students[i].gpa
+            << setw(6) << left << students[i].grade << endl;
+    }
+    drawLine(50);
+}
+
+// Function 6: Sort students by GPA (highest first)
+void sortStudents() {
+    calculateGPA();  // Update GPAs first
+
+    // Simple bubble sort
+    for (int i = 0; i < totalStudents - 1; i++) {
+        for (int j = 0; j < totalStudents - i - 1; j++) {
+            // Swap if current GPA < next GPA
+            if (students[j].gpa < students[j + 1].gpa) {
+                Student temp = students[j];      // Copy current
+                students[j] = students[j + 1];   // Copy next to current
+                students[j + 1] = temp;          // Copy current to next
+            }
+        }
+    }
+    cout << "\n✓ Students sorted by GPA (Highest to Lowest)!\n";
+}
+
+// Function 7: Display top 5 students
+void displayToppers() {
+    if (totalStudents == 0) {
+        cout << "\nNo students to display!\n";
+        return;
+    }
+
+    sortStudents();  // Sort first
+
+    cout << "\n=== TOP 5 PERFORMERS ===\n";
+    drawLine(60);
+    cout << setw(5) << left << "Rank"
+        << setw(8) << left << "ID"
+        << setw(20) << left << "Name"
+        << setw(8) << left << "GPA"
+        << setw(6) << left << "Grade" << endl;
+    drawLine(60);
+
+    // Show minimum of 5 students or all if less than 5
+    int limit = (totalStudents < 5) ? totalStudents : 5;
+    for (int i = 0; i < limit; i++) {
+        cout << setw(5) << left << (i + 1) << "."
+            << setw(8) << left << students[i].id
+            << setw(20) << left << students[i].name.substr(0, 19)
+            << setw(8) << left << fixed << setprecision(2) << students[i].gpa
+            << setw(6) << left << students[i].grade << endl;
+    }
+    drawLine(60);
+}
+
+// Function 8: Generate performance reports
+void showReports() {
+    if (totalStudents == 0) {
+        cout << "\nNo students for reports!\n";
+        return;
+    }
+
+    calculateGPA();
+
+    // Calculate overall statistics
+    float totalAllMarks = 0;
+    int totalAllSubjects = 0;
+    int passedStudents = 0;
+
+    // Count total marks and subjects
+    for (int i = 0; i < totalStudents; i++) {
+        for (int j = 0; j < students[i].numSubjects; j++) {
+            totalAllMarks += students[i].marks[j];
+            totalAllSubjects++;
+        }
+        if (students[i].grade != 'F') {
+            passedStudents++;
+        }
+    }
+
+    float overallAverage = totalAllMarks / totalAllSubjects;
+    float passPercentage = (totalStudents > 0) ? (passedStudents * 100.0 / totalStudents) : 0;
+
+    // Display report
+    cout << "\n=== PERFORMANCE REPORT ===\n";
+    drawLine(50);
+    cout << "Overall Average: " << fixed << setprecision(2) << overallAverage << endl;
+    cout << "Pass Rate: " << passedStudents << "/" << totalStudents
+        << " (" << fixed << setprecision(1) << passPercentage << "%)" << endl;
+    cout << "Total Students: " << totalStudents << endl;
+    drawLine(50);
+
+    // Save report to file
+    ofstream reportFile("grade_report.txt");
+    if (reportFile) {
+        reportFile << "UET LAHORE - GRADEBOOK REPORT\n";
+        reportFile << "=============================\n\n";
+        reportFile << "Overall Average: " << fixed << setprecision(2) << overallAverage << "\n";
+        reportFile << "Pass Rate: " << passedStudents << "/" << totalStudents
+            << " (" << fixed << setprecision(1) << passPercentage << "%)\n\n";
+        reportFile << "Top 5 Students:\n";
+        sortStudents();
+        for (int i = 0; i < min(5, totalStudents); i++) {
+            reportFile << (i + 1) << ". " << students[i].id << " - "
+                << students[i].name << " (GPA: "
+                << fixed << setprecision(2) << students[i].gpa << ")\n";
+        }
+        reportFile.close();
+        cout << "\n✓ Report saved to grade_report.txt\n";
+    }
+}
+
+// Function 9: Save all data to file
+void saveData() {
+    ofstream file("students.txt");
+    if (!file) {
+        cout << "\nError! Cannot create file!\n";
+        return;
+    }
+
+    calculateGPA();  // Update before saving
+
+    // Save each student
+    for (int i = 0; i < totalStudents; i++) {
+        file << students[i].id << " ";
+        file << students[i].name << " ";
+        file << students[i].numSubjects << " ";
+
+        // Save marks and subjects
+        for (int j = 0; j < students[i].numSubjects; j++) {
+            file << students[i].marks[j] << " ";
+            file << students[i].subjects[j] << " ";
+        }
+
+        file << students[i].gpa << " " << students[i].grade << endl;
+    }
+
+    file.close();
+    cout << "\n✓ Data saved successfully to students.txt!\n";
+}
+
+// Function 10: Load data from file
+void loadData() {
+    ifstream file("students.txt");
+    if (!file) {
+        cout << "No existing data file found. Starting fresh.\n";
+        return;
+    }
+
+    cout << "Loading student data from file...\n";
+    totalStudents = 0;  // Reset counter
+
+    // Simple load - reads basic info (can be improved later)
+    string line;
+    while (getline(file, line) && totalStudents < 100) {
+        // Basic parsing (simplified for first semester level)
+        totalStudents++;
+    }
+
+    file.close();
+    cout << totalStudents << " students loaded successfully!\n";
+}
